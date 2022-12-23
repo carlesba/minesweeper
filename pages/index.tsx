@@ -1,123 +1,181 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import { Inter } from '@next/font/google'
-import styles from '../styles/Home.module.css'
+import { Free } from "../src/Free";
+import { Just, maybe, Maybe, Nothing } from "../src/Maybe";
 
-const inter = Inter({ subsets: ['latin'] })
+interface Pos {
+  x: number;
+  y: number;
+}
+type PosId = string; // `${number}-${number}`;
+
+type Tile =
+  | { type: "mine" }
+  | { type: "mine" | "safe"; count: number; checked: boolean };
+
+interface Game {
+  status: "on" | "over";
+  tiles: Map<PosId, Tile>;
+  size: Pos;
+}
+
+const List = {
+  randomBetween: (min: number, max: number) =>
+    Math.floor(Math.random() * (max - min + 1) + min),
+  everyItem: <T,>(length: number, fn: (index: number) => T): T[] =>
+    Array.from({ length }, (_, i) => fn(i)),
+};
+
+const Position = {
+  idFromPosition: (p: Pos): PosId => `${p.x}-${p.y}`,
+
+  positionFromId: (p: PosId): Pos => {
+    const [x, y] = p.split("-").map((x) => Number(x as any as number));
+    return { x, y };
+  },
+
+  randomPosition: (max: Pos) => ({
+    x: List.randomBetween(0, max.x),
+    y: List.randomBetween(0, max.y),
+  }),
+
+  randomPositionId: (max: Pos): PosId =>
+    Free(Position.randomPosition(max)).map(Position.idFromPosition).value(),
+
+  available: (positions: Set<PosId>, id: PosId): Maybe<PosId> =>
+    positions.has(id) ? Nothing : Just(id),
+
+  everyDirection: (p: Pos) =>
+    [-1, 0, -1].reduce(
+      (total, x) =>
+        total.concat([-1, 0, 1].map((y) => ({ x: x + p.x, y: +p.y }))),
+      [] as Pos[]
+    ),
+  add: (a: Pos, b: Pos): Pos => ({
+    x: a.x + b.x,
+    y: a.y + b.y,
+  }),
+};
+
+const Board = {
+  everyTile: (size: Pos, fn: (p: Pos) => void) =>
+    List.everyItem(size.x, (x) => List.everyItem(size.y, (y) => fn({ x, y }))),
+
+  isPositionInside: (size: Pos, p: Pos) =>
+    0 < p.x && p.x < size.x && 0 < p.y && p.y < size.y,
+
+  getNeighbours: (size: Pos, target: Pos): Pos[] =>
+    Position.everyDirection(target).filter((p) =>
+      Board.isPositionInside(size, p)
+    ),
+};
+
+const Game = {
+  _anyLeft: (n: number): Maybe<number> => (n === 0 ? Nothing : Just(n)),
+  _generatePositions: (
+    size: Pos,
+    mines: number,
+    positions: Set<PosId>
+  ): Set<PosId> =>
+    Game._anyLeft(mines)
+      .map(() => Position.randomPositionId(size))
+      .map((p) =>
+        Position.available(positions, p)
+          .map((p) => new Set(positions).add(p))
+          .cata({
+            Nothing: () => Game._generatePositions(size, mines, positions),
+            Just: (ps) => Game._generatePositions(size, mines - 1, ps),
+          })
+      )
+      .cata({
+        Just: (ps) => ps,
+        Nothing: () => positions,
+      }),
+  create(size: Pos, mines: number): Game {
+    const tiles = new Map<PosId, Tile>();
+
+    let minePositions = Game._generatePositions(size, mines, new Set<PosId>());
+
+    Board.everyTile(size, (pos) => {
+      const id = Position.idFromPosition(pos);
+      maybe(id)
+        .chain((id) => (minePositions.has(id) ? Nothing : Just(pos)))
+        .map(
+          () =>
+            Board.getNeighbours(size, pos).filter((p) =>
+              minePositions.has(Position.idFromPosition(p))
+            ).length
+        )
+        .cata({
+          Nothing() {
+            tiles.set(id, { type: "mine" });
+          },
+          Just(count) {
+            tiles.set(id, { type: "safe", checked: false, count });
+          },
+        });
+    });
+
+    return {
+      size,
+      status: "on",
+      tiles,
+    };
+  },
+
+  _getTile: (game: Game, p: Pos): Tile =>
+    Free(p)
+      .map(Position.idFromPosition)
+      .map((id) => game.tiles.get(id)!)
+      .value(),
+
+  _maybeSafePosition: (game: Game, p: PosId): Maybe<Tile> =>
+    maybe(p)
+      .map((id) => game.tiles.get(id)!)
+      .chain((tile) => (tile.type === "safe" ? maybe(tile) : Nothing)),
+
+  _maybeClearedPosition: (game: Game, p: PosId): Maybe<Tile> =>
+    maybe(p)
+      .map((id) => game.tiles.get(id)!)
+      .chain((tile) =>
+        tile.type === "safe" && tile.count === 0 ? maybe(tile) : Nothing
+      ),
+
+  _checkTile: (game: Game, position: PosId) => ({
+    ...game,
+    tiles: new Map(game.tiles).set(position, {
+      ...game.tiles.get(position)!,
+      checked: true,
+    }),
+  }),
+  _gameOver: (game: Game): Game => ({ ...game, status: "over" }),
+
+  select: (game: Game, position: Pos): Game =>
+    Free(Game._getTile(game, position))
+      .chain(
+        (tile): Free<Game> =>
+          tile.type === "mine"
+            ? Free(game)
+                .map((g) =>
+                  Game._checkTile(g, Position.idFromPosition(position))
+                )
+                .map(Game._gameOver)
+            : tile.count > 0
+            ? Free(game).map((g) =>
+                Game._checkTile(g, Position.idFromPosition(position))
+              )
+            : Free(game)
+                .map((g) =>
+                  Game._checkTile(g, Position.idFromPosition(position))
+                )
+                .map((g) =>
+                  Board.getNeighbours(game.size, position).reduce(
+                    Game.select,
+                    g
+                  )
+                )
+      )
+      .value(),
+};
 
 export default function Home() {
-  return (
-    <>
-      <Head>
-        <title>Create Next App</title>
-        <meta name="description" content="Generated by create next app" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      <main className={styles.main}>
-        <div className={styles.description}>
-          <p>
-            Get started by editing&nbsp;
-            <code className={styles.code}>pages/index.tsx</code>
-          </p>
-          <div>
-            <a
-              href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              By{' '}
-              <Image
-                src="/vercel.svg"
-                alt="Vercel Logo"
-                className={styles.vercelLogo}
-                width={100}
-                height={24}
-                priority
-              />
-            </a>
-          </div>
-        </div>
-
-        <div className={styles.center}>
-          <Image
-            className={styles.logo}
-            src="/next.svg"
-            alt="Next.js Logo"
-            width={180}
-            height={37}
-            priority
-          />
-          <div className={styles.thirteen}>
-            <Image
-              src="/thirteen.svg"
-              alt="13"
-              width={40}
-              height={31}
-              priority
-            />
-          </div>
-        </div>
-
-        <div className={styles.grid}>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Docs <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Find in-depth information about Next.js features and&nbsp;API.
-            </p>
-          </a>
-
-          <a
-            href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Learn <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Learn about Next.js in an interactive course with&nbsp;quizzes!
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Templates <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Discover and deploy boilerplate example Next.js&nbsp;projects.
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Deploy <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Instantly deploy your Next.js site to a shareable URL
-              with&nbsp;Vercel.
-            </p>
-          </a>
-        </div>
-      </main>
-    </>
-  )
+  return <div>home</div>;
 }
