@@ -6,29 +6,40 @@ import { match } from "ts-pattern";
 
 function GameTile(props: { id: string }) {
   const tile = useReadGame((s) => s.tiles.get(props.id)!);
+  const gameOver = useReadGame(
+    (s) => s.status === "overtime" || s.status === "boom"
+  );
   const dispatch = useDispatchAction();
+  const flagged = useReadGame((s) => s.flags.has(props.id));
   const reveal = () =>
-    dispatch({ type: "reveal", position: Position.positionFromId(props.id) });
+    dispatch({ type: "select", position: Position.positionFromId(props.id) });
 
-  return match(tile)
-    .with({ checked: false }, () => (
-      <Tiles.UnCheckedTile id={props.id} onClick={reveal} />
+  return match({ tile, gameOver })
+    .with({ gameOver: true, tile: { type: "mine" } }, () => (
+      <Tiles.MineTile id={props.id} />
     ))
-    .with({ type: "safe", count: 0 }, () => (
+    .with({ gameOver: true, tile: { type: "safe" } }, (t) => (
+      <Tiles.SafeTile id={props.id} count={t.tile.count} />
+    ))
+    .with({ tile: { checked: false } }, () => (
+      <Tiles.UnCheckedTile id={props.id} flagged={flagged} onClick={reveal} />
+    ))
+    .with({ tile: { type: "safe", count: 0 } }, () => (
       <Tiles.SafeTile id={props.id} count={0} />
     ))
-    .with({ type: "safe" }, (t) => (
-      <Tiles.SafeTile id={props.id} count={t.count} />
+    .with({ tile: { type: "safe" } }, (t) => (
+      <Tiles.SafeTile id={props.id} count={t.tile.count} />
     ))
     .otherwise(() => <Tiles.MineTile id={props.id} />);
 }
 
 export function Board() {
+  const size = useReadGame((s) => s.size);
   return (
     <div
       className="grid aspect-square w-full gap-[1vmin]"
       style={{
-        gridTemplateColumns: "repeat(10, 1fr)",
+        gridTemplateColumns: `repeat(${size.x}, 1fr)`,
         gridAutoRows: "1fr",
       }}
     >

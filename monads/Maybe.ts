@@ -2,12 +2,13 @@ export type Maybe<A> = {
   ap: <B>(m: Maybe<any>) => Maybe<B>;
   map: <B>(cb: (arg: A) => B) => Maybe<B>;
   chain: <B>(cb: (arg: A) => Maybe<B>) => Maybe<B>;
-  alt: <B>(value: B) => Maybe<A | B>;
   cata: <B, C>(obj: { Just: (arg: A) => B; Nothing: () => C }) => B | C;
+  fold: <B, C>(nothing: () => C, just: (arg: A) => B) => B | C;
+  swap: <B>(m: B) => Maybe<A> | Maybe<B>;
   inspect: () => string;
   isNothing: () => boolean;
   isJust: () => boolean;
-  value: () => A | undefined;
+  valueOr: <T>(v: T) => A | T;
 };
 
 export const Just = <A>(arg: A): Maybe<A> => ({
@@ -15,24 +16,26 @@ export const Just = <A>(arg: A): Maybe<A> => ({
     typeof arg === "function" ? m.map((v) => arg(v)) : Nothing,
   map: <B>(cb: (a: A) => B): Maybe<B> => Just(cb(arg)),
   chain: <B>(cb: (a: A) => Maybe<B>): Maybe<B> => cb(arg),
-  alt: () => Just(arg),
   cata: (obj) => obj.Just(arg),
+  fold: (_, just) => just(arg),
+  swap: () => Nothing,
   inspect: () => `Just(${arg})`,
   isNothing: () => false,
   isJust: () => true,
-  value: () => arg,
+  valueOr: () => arg,
 });
 
 export const Nothing: Maybe<any> = {
   ap: (): Maybe<any> => Nothing,
   map: (): Maybe<any> => Nothing,
   chain: (): Maybe<any> => Nothing,
-  alt: (a) => Just(a),
   cata: (obj) => obj.Nothing(),
+  fold: (nothing, _just) => nothing(),
+  swap: (m) => Just(m),
   inspect: () => `Nothing`,
   isNothing: () => true,
   isJust: () => false,
-  value: () => undefined,
+  valueOr: (v) => v,
 };
 
 export const maybe = <T>(arg?: T): Maybe<NonNullable<T>> =>

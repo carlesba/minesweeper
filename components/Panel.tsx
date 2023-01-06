@@ -1,27 +1,29 @@
-import {
-  MINES,
-  SECONDS,
-  SIZE,
-  useDispatchAction,
-  useReadGame,
-} from "game/store";
+import { useDispatchAction, useReadGame } from "game/store";
 import { match } from "ts-pattern";
 
-function ButtonStart() {
+function FlagsButton() {
+  const flagging = useReadGame((s) => s.flagging);
   const dispatch = useDispatchAction();
-  const start = () =>
-    dispatch({ type: "restart", size: SIZE, mines: MINES, seconds: SECONDS });
-
-  return <button onClick={start}>Start</button>;
+  const toggleFlagging = () => dispatch({ type: "toggleFlagging" });
+  return (
+    <button
+      className={`text-[3vmin] font-extrabold text-gray-800 text-shadow-texture rounded-full h-full aspect-square ${
+        flagging ? "bg-gray-400 shadow-pushed" : "bg-transparent grayscale"
+      }`}
+      onClick={toggleFlagging}
+    >
+      🚩
+    </button>
+  );
 }
 
-function StatusPanel() {
-  const status = useReadGame((s) => s.status);
-  return <div>{status}</div>;
-}
-
-function FlagsPanel() {
-  return <button className="text-[3vmin] font-extrabold text-gray-800 text-shadow-texture grayscale" onClick={() => {}}>🚩 Flags</button>;
+function FlagsCounter() {
+  const count = useReadGame((s) => s.mines - s.flags.size);
+  return (
+    <div className="text-[5vmin] font-extrabold text-shadow-texture">
+      {count}
+    </div>
+  );
 }
 
 function TimerPanel() {
@@ -44,9 +46,16 @@ function TimerPanel() {
 
 export function Panel() {
   return (
-    <div className="flex justify-around w-full">
-      <FlagsPanel />
-      <TimerPanel />
+    <div className="flex justify-center items-stretch w-full">
+      <div className="w-2/6 text-center">
+        <FlagsCounter />
+      </div>
+      <div className="w-2/6 text-center">
+        <FlagsButton />
+      </div>
+      <div className="w-2/6 text-center">
+        <TimerPanel />
+      </div>
     </div>
   );
 }

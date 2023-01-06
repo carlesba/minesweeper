@@ -13,11 +13,13 @@ type Tile =
   | { type: "safe"; count: number; checked: boolean };
 
 export interface Game {
+  mines: number;
   secondsLeft: number;
-  status: "on" | "overtime" | "boom" | "win";
+  status: "idle" | "on" | "overtime" | "boom" | "win";
   tiles: Map<PosId, Tile>;
   size: Pos;
   flags: Set<PosId>;
+  flagging: boolean;
   tilesLeft: number;
 }
 
@@ -107,6 +109,15 @@ const Game = {
       ...game.tiles.get(position)!,
       checked: true,
     }),
+    flags: !game.flags.has(position)
+      ? game.flags
+      : Free(game.flags)
+          .map((f) => new Set(f))
+          .map((f) => {
+            f.delete(position);
+            return f;
+          })
+          .value(),
   }),
 
   updateStatus: (game: Game, position: Pos): Game =>
@@ -121,14 +132,32 @@ const Game = {
       }))
       .with({ game: { tilesLeft: 0 } }, () => ({ ...game, status: "win" }))
       .otherwise(() => game),
-
-  flag: (game: Game, position: Pos) => ({
+  flag: (game: Game, position: Pos): Game => ({
     ...game,
     flags: Free(position)
       .map(Position.idFromPosition)
       .map((id) => new Set(game.flags).add(id))
       .value(),
   }),
+  unflag: (game: Game, position: Pos): Game => ({
+    ...game,
+    flags: Free(position)
+      .map(Position.idFromPosition)
+      .map((id) => {
+        let s = new Set(game.flags);
+        s.delete(id);
+        return s;
+      })
+      .value(),
+  }),
+  isFlagged: (game: Game, position: Pos) =>
+    game.flags.has(Position.idFromPosition(position)),
+  maybeFlagsAvailable: (game: Game) =>
+    game.flags.size < game.mines ? Just(game) : Nothing,
+  foldAction: <T, K>(
+    game: Game,
+    handler: { flag(game: Game): T; select(game: Game): K }
+  ) => (game.flagging ? handler.flag(game) : handler.select(game)),
 };
 
 const Actions = {
@@ -158,9 +187,11 @@ const Actions = {
     });
     const tilesLeft = size.x * size.y - mines;
     return {
+      flagging: false,
+      mines,
       secondsLeft: seconds,
       size,
-      status: "on",
+      status: "idle",
       tiles,
       flags: new Set(),
       tilesLeft,
@@ -194,15 +225,17 @@ const Actions = {
           .otherwise((p) => Game.updateStatus(p.game, position))
       )
       .otherwise((p) => p.game),
-
-  flag: (game: Game, position: Pos): Game =>
-    maybe(Game.getTile(game, position))
-      .chain((tile) => (tile.checked ? Nothing : maybe(game)))
-      .map((g) => Game.flag(g, position))
-      .cata({
-        Just: (g) => g,
-        Nothing: () => game,
-      }),
+  select: (game: Game, position: Pos): Game =>
+    Game.foldAction(game, {
+      flag: (g) =>
+        Game.isFlagged(g, position)
+          ? Game.unflag(g, position)
+          : Game.maybeFlagsAvailable(g)
+              .map((g) => Game.flag(g, position))
+              .valueOr(g),
+      select: (g) =>
+        Game.isFlagged(g, position) ? g : Actions.reveal(g, position),
+    }),
   time: (game: Game): Game =>
     match<Game, Game>(game)
       .with({ secondsLeft: 1 }, (g) => ({
@@ -211,14 +244,16 @@ const Actions = {
         status: "overtime",
       }))
       .otherwise((g) => ({ ...g, secondsLeft: g.secondsLeft - 1 })),
+  toggleFlagging: (game: Game): Game => ({ ...game, flagging: !game.flagging }),
 };
 
 type GameActions =
   | { type: "flag"; position: Pos }
-  | { type: "reveal"; position: Pos }
+  | { type: "select"; position: Pos }
   | { type: "start" }
   | { type: "restart"; size: Pos; mines: number; seconds: number }
-  | { type: "time" };
+  | { type: "time" }
+  | { type: "toggleFlagging" };
 
 export class Minesweeper {
   private listeners: Set<(game: Game) => void>;
@@ -241,11 +276,8 @@ export class Minesweeper {
 
   _applyAction(action: GameActions) {
     switch (action.type) {
-      case "flag": {
-        return Actions.flag(this.game, action.position);
-      }
-      case "reveal": {
-        return Actions.reveal(this.game, action.position);
+      case "select": {
+        return Actions.select(this.game, action.position);
       }
       case "time": {
         if (this.game.status === "on") {
@@ -255,6 +287,7 @@ export class Minesweeper {
       }
       case "start": {
         this.setNextTick();
+        this.game = { ...this.game, status: "on" };
         return this.game;
       }
       case "restart": {
@@ -263,7 +296,12 @@ export class Minesweeper {
           action.mines,
           action.seconds
         );
+        this.game = { ...this.game, status: "on" };
         this.setNextTick();
+        return this.game;
+      }
+      case "toggleFlagging": {
+        this.game = Actions.toggleFlagging(this.game);
         return this.game;
       }
       default: {

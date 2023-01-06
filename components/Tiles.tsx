@@ -5,7 +5,7 @@ const Tile = (props: {
   content?: string;
 }) => (
   <div
-    className={`aspect-square rounded-full relative flex justify-center items-center transition-colors ${props.className}`}
+    className={`aspect-square rounded-full relative flex justify-center items-center transition-colors font-bold text-[3vmin] ${props.className}`}
     data-id={props.id}
     onClick={props.onClick}
   >
@@ -19,7 +19,7 @@ const Tile = (props: {
 );
 
 export const MineTile = (props: { id: string }) => (
-  <Tile className="bg-red-600" id={props.id} content="💣" />
+  <Tile className="bg-red-800 shadow-pushed" id={props.id} content="💣" />
 );
 
 const classNames = [
@@ -39,16 +39,21 @@ export const SafeTile = (props: { id: string; count: number }) => (
   <Tile
     className={`${
       classNames[props.count]
-    } bg-transparent font-bold text-[3vmin] shadow-pushed`}
+    } bg-transparent shadow-pushed`}
     id={props.id}
     content={props.count.toString()}
   />
 );
 
-export const UnCheckedTile = (props: { id: string; onClick(): void }) => (
+export const UnCheckedTile = (props: {
+  id: string;
+  flagged?: boolean;
+  onClick(): void;
+}) => (
   <Tile
     className="bg-gray-500 shadow-touchable hover:shadow-pushed"
     id={props.id}
     onClick={props.onClick}
+    content={props.flagged ? "🚩" : ""}
   />
 );
