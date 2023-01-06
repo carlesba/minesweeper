@@ -5,7 +5,7 @@ const Tile = (props: {
   content?: string;
 }) => (
   <div
-    className={`aspect-square rounded-full relative flex justify-center items-center transition-colors font-bold text-[3vmin] ${props.className}`}
+    className={`aspect-square rounded-full relative flex justify-center items-center transition-colors font-bold text-[3vh] ${props.className}`}
     data-id={props.id}
     onClick={props.onClick}
   >

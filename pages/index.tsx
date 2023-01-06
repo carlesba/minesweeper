@@ -11,8 +11,8 @@ import { match } from "ts-pattern";
 
 const Title = () => (
   <h1
-    className="text-[5vmin] font-extrabold text-gray-800 text-center text-shadow-texture"
-    style={{ letterSpacing: "-0.3vmin" }}
+    className="text-[5vh] font-extrabold text-gray-800 text-center text-shadow-texture"
+    style={{ letterSpacing: "-0.3vh" }}
   >
     Minesweeper
   </h1>
@@ -38,8 +38,8 @@ function NotificationController(props: { children: React.ReactNode }) {
       >
         <div className="w-[40vh] bg-gray-500 p-[2vh] rounded-2xl shadow-2xl flex flex-wrap justify-start items-center flex-col ">
           <h1
-            className="text-[5vmin] font-extrabold text-gray-800 text-center text-shadow-texture"
-            style={{ letterSpacing: "-0.3vmin" }}
+            className="text-[5vh] font-extrabold text-gray-800 text-center text-shadow-texture"
+            style={{ letterSpacing: "-0.3vh" }}
           >
             {match(status)
               .with("win", () => "All cleared!")
@@ -71,13 +71,13 @@ export default function Home() {
   return (
     <NotificationController>
       <div className="h-screen w-screen bg-gray-400 flex flex-wrap justify-between items-center flex-col">
-        <div className="h-[10vh] w-[40vmin]">
+        <div className="h-[10vh] w-[40vh]">
           <Title />
         </div>
         <div className="h-[80vh] w-[40vh]">
           <Board />
         </div>
-        <div className="h-[10vh] w-[40vmin]">
+        <div className="h-[10vh] w-[40vh]">
           <Panel />
         </div>
       </div>

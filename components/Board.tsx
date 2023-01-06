@@ -37,7 +37,7 @@ export function Board() {
   const size = useReadGame((s) => s.size);
   return (
     <div
-      className="grid aspect-square w-full gap-[1vmin]"
+      className="grid aspect-square w-full gap-[1vh]"
       style={{
         gridTemplateColumns: `repeat(${size.x}, 1fr)`,
         gridAutoRows: "1fr",

@@ -7,7 +7,7 @@ function FlagsButton() {
   const toggleFlagging = () => dispatch({ type: "toggleFlagging" });
   return (
     <button
-      className={`text-[3vmin] font-extrabold text-gray-800 text-shadow-texture rounded-full h-full aspect-square ${
+      className={`text-[3vh] font-extrabold text-gray-800 text-shadow-texture rounded-full h-full aspect-square ${
         flagging ? "bg-gray-400 shadow-pushed" : "bg-transparent grayscale"
       }`}
       onClick={toggleFlagging}
@@ -20,7 +20,7 @@ function FlagsButton() {
 function FlagsCounter() {
   const count = useReadGame((s) => s.mines - s.flags.size);
   return (
-    <div className="text-[5vmin] font-extrabold text-shadow-texture">
+    <div className="text-[5vh] font-extrabold text-shadow-texture">
       {count}
     </div>
   );
@@ -30,7 +30,7 @@ function TimerPanel() {
   const seconds = useReadGame((s) => s.secondsLeft);
   return (
     <div
-      className={`text-[5vmin] font-extrabold text-shadow-texture ${match(
+      className={`text-[5vh] font-extrabold text-shadow-texture ${match(
         seconds
       )
         .when(
