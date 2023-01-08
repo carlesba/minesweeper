@@ -20,9 +20,7 @@ function FlagsButton() {
 function FlagsCounter() {
   const count = useReadGame((s) => s.mines - s.flags.size);
   return (
-    <div className="text-[5vh] font-extrabold text-shadow-texture">
-      {count}
-    </div>
+    <div className="text-[5vh] font-extrabold text-shadow-texture">{count}</div>
   );
 }
 
@@ -30,9 +28,7 @@ function TimerPanel() {
   const seconds = useReadGame((s) => s.secondsLeft);
   return (
     <div
-      className={`text-[5vh] font-extrabold text-shadow-texture ${match(
-        seconds
-      )
+      className={`text-[5vh] font-extrabold text-shadow-texture ${match(seconds)
         .when(
           (s) => s <= 10,
           () => "text-pink-900"
@@ -44,7 +40,7 @@ function TimerPanel() {
   );
 }
 
-export function Panel() {
+function PanelOn() {
   return (
     <div className="flex justify-center items-stretch w-full">
       <div className="w-2/6 text-center">
@@ -58,4 +54,26 @@ export function Panel() {
       </div>
     </div>
   );
+}
+
+function PanelMessage() {
+  const status = useReadGame((s) => s.status);
+  const message = match(status)
+    .with("overtime", () => "Time's up! 🕰️")
+    .with("boom", () => "Booom! 😵")
+    .with("win", () => "You win! 🎉")
+    .otherwise(() => "");
+  return (
+    <div className="flex justify-center items-stretch w-full text-[3vh] font-extrabold text-gray-800 text-shadow-texture">
+      {message}
+    </div>
+  );
+}
+
+export function Panel() {
+  const gameOver = useReadGame(
+    (s) => s.status === "overtime" || s.status === "win" || s.status === "boom"
+  );
+
+  return !gameOver ? <PanelOn /> : <PanelMessage />;
 }

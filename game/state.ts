@@ -3,7 +3,7 @@ import { Minesweeper, Game, List, Position } from "./minesweeper";
 
 export const SIZE = { x: 6, y: 9 };
 export const MINES = 10;
-export const SECONDS = 200;
+export const SECONDS = 100;
 
 export const store = Minesweeper.create(SIZE, MINES, SECONDS);
 

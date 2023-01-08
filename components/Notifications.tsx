@@ -2,6 +2,7 @@ import { store, useDispatchAction, useReadGame } from "game/state";
 import { match } from "ts-pattern";
 import { useSyncExternalStore } from "react";
 import { Store } from "data/Store";
+import classNames from "classnames";
 
 const Title = (props: { children: string }) => (
   <h1 className="text-[5vh] font-extrabold text-gray-800 text-center text-shadow-texture letter-spacing-s mb-[3vh]">
@@ -60,18 +61,23 @@ function BlurredOverlay(props: {
   return (
     <div onClick={props.onClick}>
       <div
-        className={`ease-out-expo transition-all fixed top-0 left-0 flex justify-center items-center z-10 h-screen w-screen bg-gray-400 bg-transparent duration-500 ${
-          props.visible
-            ? "opacity-100 translate-y-[-10vh]"
-            : "opacity-0 pointer-events-none translate-y-0"
-        }`}
+        className={classNames(
+          "ease-out-expo transition-all fixed top-0 left-0 flex justify-center items-center z-10 h-screen w-screen bg-gray-400 bg-transparent duration-500",
+          {
+            "opacity-100 translate-y-[-10vh]": props.visible,
+            "opacity-0 pointer-events-none translate-y-0": !props.visible,
+          }
+        )}
       >
         {props.over}
       </div>
       <div
-        className={`ease-out-expo filter transition-filter duration-700 ${
-          props.visible ? "blur-[0.5vh]" : ""
-        }`}
+        className={classNames(
+          "ease-out-expo filter transition-filter duration-700",
+          {
+            "blur-[0.5vh]": props.visible,
+          }
+        )}
       >
         {props.content}
       </div>
@@ -79,7 +85,7 @@ function BlurredOverlay(props: {
   );
 }
 
-type NotificationState = { visible: boolean; content: "notification" | "menu" }; // "hidden" | "notification" | "menu";
+type NotificationState = { visible: boolean; content: "notification" | "menu" };
 class NotificationStore {
   private store: Store<NotificationState>;
   constructor() {

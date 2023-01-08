@@ -7,16 +7,17 @@ import { match } from "ts-pattern";
 function GameTile(props: { id: string }) {
   const tile = useReadGame((s) => s.tiles.get(props.id)!);
   const gameOver = useReadGame(
-    (s) => s.status === "overtime" || s.status === "boom"
+    (s) => s.status === "overtime" || s.status === "boom" || s.status === "win"
   );
+  const gameSolved = useReadGame((s) => s.status === "win");
   const dispatch = useDispatchAction();
   const flagged = useReadGame((s) => s.flags.has(props.id));
   const reveal = () =>
     dispatch({ type: "select", position: Position.positionFromId(props.id) });
 
-  return match({ tile, gameOver })
+  return match({ tile, gameOver, gameSolved })
     .with({ gameOver: true, tile: { type: "mine" } }, () => (
-      <Tiles.MineTile id={props.id} />
+      <Tiles.MineTile id={props.id} solved={gameSolved} />
     ))
     .with({ gameOver: true, tile: { type: "safe" } }, (t) => (
       <Tiles.SafeTile id={props.id} count={t.tile.count} />

@@ -1,3 +1,5 @@
+import classnames from "classnames";
+
 const Tile = (props: {
   id: string;
   onClick?(): void;
@@ -5,7 +7,10 @@ const Tile = (props: {
   content?: string;
 }) => (
   <div
-    className={`aspect-square rounded-full relative flex justify-center items-center transition-colors font-bold text-[3vh] ${props.className}`}
+    className={classnames(
+      "aspect-square rounded-full relative flex justify-center items-center transition-colors font-bold text-[3vh]",
+      props.className
+    )}
     data-id={props.id}
     onClick={props.onClick}
   >
@@ -18,8 +23,15 @@ const Tile = (props: {
   </div>
 );
 
-export const MineTile = (props: { id: string }) => (
-  <Tile className="bg-red-600 shadow-pushed" id={props.id} content="💣" />
+export const MineTile = (props: { id: string; solved?: boolean }) => (
+  <Tile
+    className={classnames("shadow-pushed", {
+      "bg-red-600": !props.solved,
+      "bg-green-600": props.solved,
+    })}
+    id={props.id}
+    content="💣"
+  />
 );
 
 const classNames = [
@@ -37,9 +49,10 @@ const classNames = [
 
 export const SafeTile = (props: { id: string; count: number }) => (
   <Tile
-    className={`${
-      classNames[props.count]
-    } bg-transparent shadow-pushed`}
+    className={classnames(
+      classNames[props.count],
+      "bg-transparent shadow-pushed"
+    )}
     id={props.id}
     content={props.count.toString()}
   />
