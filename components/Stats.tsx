@@ -67,9 +67,9 @@ const Rank = (props: {
 );
 export function Stats() {
   const stats = useGetStats((s) => s);
-  const statsWin = useGetStats((s) => s.data.get("win") || 0);
-  const statsMine = useGetStats((s) => s.data.get("mine") || 0);
-  const statsTime = useGetStats((s) => s.data.get("time") || 0);
+  const statsWin = useGetStats((s) => s.data.win || 0);
+  const statsMine = useGetStats((s) => s.data.mine || 0);
+  const statsTime = useGetStats((s) => s.data.time || 0);
 
   const currentDate = useGetCurrentDate();
   const total = statsWin + statsMine + statsTime;

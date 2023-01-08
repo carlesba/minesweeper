@@ -6,11 +6,15 @@ import { store } from "./state";
 type StatsReason = "time" | "win" | "mine";
 
 type Rank = { date: number; timeLeft: number };
-type StatsData = Map<StatsReason, number>;
+type StatsData = Record<StatsReason, number>;
 
-export type StatsState = { ranks: Rank[]; data: StatsData };
+export type StatsState = { version: string; ranks: Rank[]; data: StatsData };
 
-const initialState: StatsState = { ranks: [], data: new Map() };
+const initialState: StatsState = {
+  version: "1",
+  ranks: [],
+  data: { time: 0, win: 0, mine: 0 },
+};
 
 const maybeLocalStorage = () =>
   typeof localStorage === "object" ? maybe(localStorage) : Nothing;
@@ -19,7 +23,8 @@ const readStorage = (): Maybe<StatsState> =>
   maybeLocalStorage()
     .map((s) => s.getItem("stats"))
     .chain((s) => (!s ? Nothing : maybe(s)))
-    .map(JSON.parse);
+    .map(JSON.parse)
+    .chain((s) => (!s.version ? Nothing : maybe(s)));
 
 class StatsStore {
   private store: Store<StatsState>;
@@ -40,22 +45,20 @@ class StatsStore {
     reason: StatsReason;
   }) => {
     const state = this.store.getState();
-    const data = new Map(state.data);
+    const version = state.version;
+    const data = { ...state.data };
     let ranks = state.ranks;
     this.date = props.date;
 
     match(props)
       .with({ reason: "time" }, () => {
-        const dataTime = data.get("time") || 0;
-        data.set("time", dataTime + 1);
+        data.time += 1;
       })
       .with({ reason: "mine" }, () => {
-        const d = data.get("mine") || 0;
-        data.set("mine", d + 1);
+        data.mine += 1;
       })
       .with({ reason: "win" }, ({ date, timeLeft }) => {
-        const d = data.get("win") || 0;
-        data.set("win", d + 1);
+        data.win += 1;
 
         ranks = [...state.ranks, { date, timeLeft }]
           .sort((a, b) => a.timeLeft - b.timeLeft)
@@ -67,7 +70,7 @@ class StatsStore {
       s.setItem("stats", JSON.stringify({ ranks, data }));
     });
 
-    this.store.dispatch({ ranks, data });
+    this.store.dispatch({ version, ranks, data });
   };
   getLatestDate = () => this.date;
 }
