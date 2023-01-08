@@ -51,7 +51,7 @@ export const UnCheckedTile = (props: {
   onClick(): void;
 }) => (
   <Tile
-    className="bg-gray-500 shadow-touchable hover:shadow-pushed"
+    className="bg-gray-300 shadow-touchable hover:shadow-pushed"
     id={props.id}
     onClick={props.onClick}
     content={props.flagged ? "🚩" : ""}

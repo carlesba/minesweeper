@@ -8,7 +8,7 @@ function FlagsButton() {
   return (
     <button
       className={`text-[3vh] font-extrabold text-gray-800 text-shadow-texture rounded-full h-full aspect-square ${
-        flagging ? "bg-gray-400 shadow-pushed" : "bg-transparent grayscale"
+        flagging ? "shadow-pushed" : "bg-transparent grayscale"
       }`}
       onClick={toggleFlagging}
     >
