@@ -1,6 +1,6 @@
 import { match } from "ts-pattern";
-import { Free } from "monads/Free";
-import { Just, maybe, Maybe, Nothing } from "monads/Maybe";
+import { Free } from "data/Free";
+import { Just, maybe, Maybe, Nothing } from "data/Maybe";
 
 interface Pos {
   x: number;
@@ -14,6 +14,7 @@ type Tile =
 
 export interface Game {
   mines: number;
+  time: number;
   secondsLeft: number;
   status: "idle" | "on" | "overtime" | "boom" | "win";
   tiles: Map<PosId, Tile>;
@@ -189,6 +190,7 @@ const Actions = {
     return {
       flagging: false,
       mines,
+      time: seconds,
       secondsLeft: seconds,
       size,
       status: "idle",
@@ -244,14 +246,15 @@ const Actions = {
         status: "overtime",
       }))
       .otherwise((g) => ({ ...g, secondsLeft: g.secondsLeft - 1 })),
-  toggleFlagging: (game: Game): Game => ({ ...game, flagging: !game.flagging }),
+  toggleFlagging: (game: Game): Game =>
+    game.status !== "on" ? game : { ...game, flagging: !game.flagging },
 };
 
 type GameActions =
   | { type: "flag"; position: Pos }
   | { type: "select"; position: Pos }
-  | { type: "start" }
-  | { type: "restart"; size: Pos; mines: number; seconds: number }
+  | { type: "restart" }
+  | { type: "start"; size: Pos; mines: number; seconds: number }
   | { type: "time" }
   | { type: "toggleFlagging" };
 
@@ -277,6 +280,10 @@ export class Minesweeper {
   _applyAction(action: GameActions) {
     switch (action.type) {
       case "select": {
+        if (this.game.status === "idle") {
+          this.setNextTick();
+          this.game = { ...this.game, status: "on" };
+        }
         return Actions.select(this.game, action.position);
       }
       case "time": {
@@ -285,12 +292,17 @@ export class Minesweeper {
         }
         return Actions.time(this.game);
       }
-      case "start": {
+      case "restart": {
         this.setNextTick();
+        this.game = Actions.createGame(
+          this.game.size,
+          this.game.mines,
+          this.game.time
+        );
         this.game = { ...this.game, status: "on" };
         return this.game;
       }
-      case "restart": {
+      case "start": {
         this.game = Actions.createGame(
           action.size,
           action.mines,

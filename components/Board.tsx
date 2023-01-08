@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import * as Tiles from "./Tiles";
-import { allPositions, useDispatchAction, useReadGame } from "game/store";
+import { allPositions, useDispatchAction, useReadGame } from "game/state";
 import { Position } from "game/minesweeper";
 import { match } from "ts-pattern";
 

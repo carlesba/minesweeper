@@ -1,4 +1,4 @@
-import { useDispatchAction, useReadGame } from "game/store";
+import { useDispatchAction, useReadGame } from "game/state";
 import { match } from "ts-pattern";
 
 function FlagsButton() {

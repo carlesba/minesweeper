@@ -19,7 +19,7 @@ const Tile = (props: {
 );
 
 export const MineTile = (props: { id: string }) => (
-  <Tile className="bg-red-800 shadow-pushed" id={props.id} content="💣" />
+  <Tile className="bg-red-600 shadow-pushed" id={props.id} content="💣" />
 );
 
 const classNames = [
