@@ -3,6 +3,7 @@ import { match } from "ts-pattern";
 import { useSyncExternalStore } from "react";
 import { Store } from "data/Store";
 import classNames from "classnames";
+import { Stats } from "components/Stats";
 
 const Title = (props: { children: string }) => (
   <h1 className="text-[5vh] font-extrabold text-gray-800 text-center text-shadow-texture letter-spacing-s mb-[3vh]">
@@ -11,7 +12,7 @@ const Title = (props: { children: string }) => (
 );
 
 const Message = (props: { children: string }) => (
-  <h1 className="text-[3vh] text-gray-600 text-center text-shadow-texture">
+  <h1 className="text-[3vh] text-gray-600 text-center">
     {props.children}
   </h1>
 );
@@ -114,6 +115,7 @@ store.subscribe((next) => {
   match(next)
     .with({ status: "boom" }, () => notificationStore.showNotification())
     .with({ status: "overtime" }, () => notificationStore.showNotification())
+    .with({ status: "win" }, () => notificationStore.showNotification())
     .otherwise(() => {});
 });
 
@@ -162,13 +164,19 @@ export function Notifications(props: { children: React.ReactNode }) {
           />
         ))
         .with({ gameStatus: "win" }, () => (
-          <Notification title="You win!" message="All cleared!" />
+          <Notification title="You won!" message="All cleared!">
+            <Stats />
+          </Notification>
         ))
         .with({ gameStatus: "overtime" }, () => (
-          <Notification title="Game Over" message="Time's up!" />
+          <Notification title="Game Over" message="Time's up!">
+            <Stats />
+          </Notification>
         ))
         .with({ gameStatus: "boom" }, () => (
-          <Notification title="Game Over" message="You hit a mine!" />
+          <Notification title="Game Over" message="You hit a mine!">
+            <Stats />
+          </Notification>
         ))
         .otherwise(() => (
           <div />
