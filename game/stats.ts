@@ -5,13 +5,15 @@ import { store } from "./state";
 
 type StatsReason = "time" | "win" | "mine";
 
-type Rank = { date: number; timeLeft: number };
+type Rank = { date: number; time: number };
 type StatsData = Record<StatsReason, number>;
+
+const LATEST_VERSION = "2";
 
 export type StatsState = { version: string; ranks: Rank[]; data: StatsData };
 
 const initialState: StatsState = {
-  version: "1",
+  version: LATEST_VERSION,
   ranks: [],
   data: { time: 0, win: 0, mine: 0 },
 };
@@ -24,7 +26,7 @@ const readStorage = (): Maybe<StatsState> =>
     .map((s) => s.getItem("stats"))
     .chain((s) => (!s ? Nothing : maybe(s)))
     .map(JSON.parse)
-    .chain((s) => (!s.version ? Nothing : maybe(s)));
+    .chain((s) => (s.version !== LATEST_VERSION ? Nothing : maybe(s)));
 
 class StatsStore {
   private store: Store<StatsState>;
@@ -39,11 +41,7 @@ class StatsStore {
   subscribe = (fn: (next: StatsState, prev: StatsState) => void) =>
     this.store.subscribe(fn);
 
-  register = (props: {
-    date: number;
-    timeLeft: number;
-    reason: StatsReason;
-  }) => {
+  register = (props: { date: number; time: number; reason: StatsReason }) => {
     const state = this.store.getState();
     const version = state.version;
     const data = { ...state.data };
@@ -57,11 +55,11 @@ class StatsStore {
       .with({ reason: "mine" }, () => {
         data.mine += 1;
       })
-      .with({ reason: "win" }, ({ date, timeLeft }) => {
+      .with({ reason: "win" }, ({ date, time }) => {
         data.win += 1;
 
-        ranks = [...state.ranks, { date, timeLeft }]
-          .sort((a, b) => a.timeLeft - b.timeLeft)
+        ranks = [...state.ranks, { date, time }]
+          .sort((a, b) => b.time - a.time)
           .slice(0, 10);
       })
       .otherwise(() => {});
@@ -86,7 +84,7 @@ store.subscribe((next) => {
   const register = (reason: StatsReason) =>
     statsStore.register({
       date: new Date().getTime(),
-      timeLeft: next.secondsLeft,
+      time: next.time - next.secondsLeft,
       reason,
     });
 

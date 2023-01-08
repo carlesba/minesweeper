@@ -81,7 +81,7 @@ export function Stats() {
           key={i}
           position={i + 1}
           date={r.date}
-          seconds={r.timeLeft}
+          seconds={r.time}
           current={currentDate === r.date}
         />
       ))}
