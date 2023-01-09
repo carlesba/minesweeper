@@ -65,7 +65,10 @@ class StatsStore {
       .otherwise(() => {});
 
     maybeLocalStorage().map((s) => {
-      s.setItem("stats", JSON.stringify({ ranks, data }));
+      s.setItem(
+        "stats",
+        JSON.stringify({ version: LATEST_VERSION, ranks, data })
+      );
     });
 
     this.store.dispatch({ version, ranks, data });
