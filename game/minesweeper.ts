@@ -35,22 +35,14 @@ export const List = {
 
 export const Position = {
   generate: (limit: Pos, count: number, state: Set<PosId>): Set<PosId> =>
-    state.size === count
-      ? state
-      : Just(state)
-          .map(() => Position.randomPositionId(limit))
-          .map((p) =>
-            Position.available(state, p)
-              .map((p) => new Set(state).add(p))
-              .cata({
-                Nothing: () => Position.generate(limit, count, state),
-                Just: (ps) => Position.generate(limit, count, ps),
-              })
-          )
-          .cata({
-            Just: (ps) => ps,
-            Nothing: () => state,
-          }),
+    Just(state.size === count)
+      .chain((done) => (done ? Nothing : Just(state)))
+      .map(() => Position.randomPositionId(limit))
+      .map((p) => new Set(state).add(p))
+      .cata({
+        Just: (s) => Position.generate(limit, count, s),
+        Nothing: () => state,
+      }),
 
   idFromPosition: (p: Pos): PosId => `${p.x}-${p.y}`,
 
@@ -60,8 +52,8 @@ export const Position = {
   },
 
   randomPosition: (max: Pos) => ({
-    x: List.randomBetween(0, max.x),
-    y: List.randomBetween(0, max.y),
+    x: List.randomBetween(0, max.x - 1),
+    y: List.randomBetween(0, max.y - 1),
   }),
 
   randomPositionId: (max: Pos): PosId =>
@@ -195,22 +187,15 @@ const Actions = {
 
     Board.everyTile(size, (pos) => {
       const id = Position.idFromPosition(pos);
-      maybe(id)
-        .chain((id) => (minePositions.has(id) ? Nothing : Just(pos)))
-        .map(
-          () =>
-            Board.getNeighbours(size, pos).filter((p) =>
-              minePositions.has(Position.idFromPosition(p))
-            ).length
-        )
-        .cata({
-          Nothing() {
-            tiles.set(id, { type: "mine", checked: false });
-          },
-          Just(count) {
-            tiles.set(id, { type: "safe", checked: false, count });
-          },
-        });
+      if (minePositions.has(id)) {
+        tiles.set(id, { type: "mine", checked: false });
+      } else {
+        const count = Board.getNeighbours(size, pos).filter((p) =>
+          minePositions.has(Position.idFromPosition(p))
+        ).length;
+
+        tiles.set(id, { type: "safe", checked: false, count });
+      }
     });
     return {
       flagging: false,

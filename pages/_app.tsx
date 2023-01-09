@@ -1,7 +1,7 @@
 import '../styles/globals.css'
 import type { AppProps } from 'next/app'
 
-const version = "202301091111"
+const version = "202301091126"
 
 console.log(version)
 
