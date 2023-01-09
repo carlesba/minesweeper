@@ -59,7 +59,7 @@ class StatsStore {
         data.win += 1;
 
         ranks = [...state.ranks, { date, time }]
-          .sort((a, b) => b.time - a.time)
+          .sort((a, b) => a.time - b.time)
           .slice(0, 10);
       })
       .otherwise(() => {});
