@@ -2,6 +2,8 @@ import { match } from "ts-pattern";
 import { Free } from "data/Free";
 import { Just, maybe, Maybe, Nothing } from "data/Maybe";
 
+const DEBUG = false;
+
 interface Pos {
   x: number;
   y: number;
@@ -21,7 +23,7 @@ export interface Game {
   size: Pos;
   flags: Set<PosId>;
   flagging: boolean;
-  tilesLeft: number;
+  revealed: Set<PosId>;
 }
 
 export const List = {
@@ -33,21 +35,22 @@ export const List = {
 
 export const Position = {
   generate: (limit: Pos, count: number, state: Set<PosId>): Set<PosId> =>
-    Just(count)
-      .chain((n) => (n === 0 ? Nothing : maybe(n)))
-      .map(() => Position.randomPositionId(limit))
-      .map((p) =>
-        Position.available(state, p)
-          .map((p) => new Set(state).add(p))
+    state.size === count
+      ? state
+      : Just(state)
+          .map(() => Position.randomPositionId(limit))
+          .map((p) =>
+            Position.available(state, p)
+              .map((p) => new Set(state).add(p))
+              .cata({
+                Nothing: () => Position.generate(limit, count, state),
+                Just: (ps) => Position.generate(limit, count, ps),
+              })
+          )
           .cata({
-            Nothing: () => Position.generate(limit, count, state),
-            Just: (ps) => Position.generate(limit, count - 1, ps),
-          })
-      )
-      .cata({
-        Just: (ps) => ps,
-        Nothing: () => state,
-      }),
+            Just: (ps) => ps,
+            Nothing: () => state,
+          }),
 
   idFromPosition: (p: Pos): PosId => `${p.x}-${p.y}`,
 
@@ -96,42 +99,65 @@ const Board = {
     ),
 };
 
+const Tile = {
+  checkTile: (tile: Tile): Tile => ({ ...tile, checked: true }),
+};
+
 const Game = {
+  getTileById: (game: Game, p: PosId): Tile =>
+    Free(p)
+      .map((id) => game.tiles.get(id)!)
+      .value(),
   getTile: (game: Game, p: Pos): Tile =>
     Free(p)
       .map(Position.idFromPosition)
-      .map((id) => game.tiles.get(id)!)
+      .map((id) => Game.getTileById(game, id))
       .value(),
-
-  revealTile: (game: Game, position: PosId): Game => ({
-    ...game,
-    tilesLeft: game.tilesLeft - 1,
-    tiles: new Map(game.tiles).set(position, {
-      ...game.tiles.get(position)!,
-      checked: true,
-    }),
-    flags: !game.flags.has(position)
-      ? game.flags
-      : Free(game.flags)
-          .map((f) => new Set(f))
-          .map((f) => {
-            f.delete(position);
-            return f;
-          })
-          .value(),
-  }),
-
+  isTileChecked: (game: Game, p: Pos): boolean =>
+    Game.getTileById(game, Position.idFromPosition(p)).checked,
+  checkTile: (game: Game, p: PosId): Game =>
+    Free(game)
+      .map((g) => {
+        const tiles = new Map(g.tiles);
+        tiles.set(p, Tile.checkTile(Game.getTileById(g, p)));
+        return { ...g, tiles };
+      })
+      .value(),
+  revealTile: (game: Game, position: PosId): Game =>
+    Free(game)
+      .map((g) => {
+        const revealed = new Set(g.revealed);
+        revealed.add(position);
+        return { ...g, revealed };
+      })
+      .map((g) => Game.checkTile(g, position))
+      .map((g) =>
+        !g.flags.has(position)
+          ? g
+          : {
+              ...g,
+              flags: Free(game.flags)
+                .map((f) => new Set(f))
+                .map((f) => {
+                  f.delete(position);
+                  return f;
+                })
+                .value(),
+            }
+      )
+      .value(),
   updateStatus: (game: Game, position: Pos): Game =>
-    match<{ game: Game; tile: Tile }, Game>({
+    match<{ game: Game; tile: Tile; left: number }, Game>({
       game,
       tile: Game.getTile(game, position),
+      left: game.size.x * game.size.y - game.revealed.size - game.mines,
     })
       .with({ tile: { type: "mine" } }, () => ({ ...game, status: "boom" }))
       .with({ game: { secondsLeft: 0 } }, () => ({
         ...game,
         status: "overtime",
       }))
-      .with({ game: { tilesLeft: 0 } }, () => ({ ...game, status: "win" }))
+      .with({ left: 0 }, () => ({ ...game, status: "win" }))
       .otherwise(() => game),
   flag: (game: Game, position: Pos): Game => ({
     ...game,
@@ -186,7 +212,6 @@ const Actions = {
           },
         });
     });
-    const tilesLeft = size.x * size.y - mines;
     return {
       flagging: false,
       mines,
@@ -196,37 +221,49 @@ const Actions = {
       status: "idle",
       tiles,
       flags: new Set(),
-      tilesLeft,
+      revealed: new Set(),
     };
   },
   reveal: (game: Game, position: Pos): Game =>
-    match<{ game: Game; id: string }, Game>({
-      game,
-      id: Position.idFromPosition(position),
-    })
-      .with({ game: { status: "on" } }, (p) =>
-        match<{ game: Game; tile: Tile; id: PosId }, Game>({
-          game: Game.revealTile(p.game, p.id),
-          id: p.id,
-          tile: Game.getTile(game, position),
-        })
-          .with({ tile: { checked: true } }, () => game)
-          .with({ tile: { type: "mine" } }, (p) =>
-            Game.updateStatus(p.game, position)
-          )
-          .with({ tile: { type: "safe", count: 0 } }, (p) =>
-            Board.getNeighbours(game.size, position).reduce(
-              (g, p) =>
-                Free(g)
-                  .map((g) => Actions.reveal(g, p))
-                  .map((g) => Game.updateStatus(g, p))
-                  .value(),
-              p.game
-            )
-          )
-          .otherwise((p) => Game.updateStatus(p.game, position))
+    Free(position)
+      .map(Position.idFromPosition)
+      .map((id) =>
+        game.status !== "on"
+          ? game
+          : match({ game, id, tile: Game.getTile(game, position) })
+              .with({ tile: { checked: true } }, () => game)
+              .with({ tile: { type: "mine" } }, () =>
+                Free(game)
+                  .map((g) => Game.revealTile(g, id))
+                  .map((g) => Game.updateStatus(g, position))
+                  .value()
+              )
+              .with({ tile: { type: "safe" } }, ({ tile }) =>
+                tile.count > 0
+                  ? Free(game)
+                      .map((g) => Game.revealTile(g, id))
+                      .map((g) => Game.updateStatus(g, position))
+                      .value()
+                  : Free(game)
+                      .map((g) => Game.revealTile(g, id))
+                      .map((g) => Game.updateStatus(g, position))
+                      .map((g) =>
+                        Board.getNeighbours(g.size, position)
+                          .filter((pos) => !Game.isTileChecked(g, pos))
+                          .reduce(
+                            (gg, pos) =>
+                              Free(gg)
+                                .map((ggg) => Actions.reveal(ggg, pos))
+                                .map((ggg) => Game.updateStatus(ggg, pos))
+                                .value(),
+                            g
+                          )
+                      )
+                      .value()
+              )
+              .otherwise(() => game)
       )
-      .otherwise((p) => p.game),
+      .value(),
   select: (game: Game, position: Pos): Game =>
     Game.foldAction(game, {
       flag: (g) =>
@@ -326,6 +363,10 @@ export class Minesweeper {
   };
   dispatch = (action: GameActions) => {
     const game = this._applyAction(action);
+    if (DEBUG && action.type !== "time") {
+      console.log("action", action);
+      console.log("game", game);
+    }
     this.game = game;
     if (game.status !== "on" && this.timer) {
       clearTimeout(this.timer);

@@ -22,8 +22,13 @@ function GameTile(props: { id: string }) {
     .with({ gameOver: true, tile: { type: "safe" } }, (t) => (
       <Tiles.SafeTile id={props.id} count={t.tile.count} />
     ))
-    .with({ tile: { checked: false } }, () => (
-      <Tiles.UnCheckedTile id={props.id} flagged={flagged} onClick={reveal} />
+    .with({ tile: { checked: false } }, ({ tile }) => (
+      <Tiles.UnCheckedTile
+        id={props.id}
+        flagged={flagged}
+        onClick={reveal}
+        type={tile.type}
+      />
     ))
     .with({ tile: { type: "safe", count: 0 } }, () => (
       <Tiles.SafeTile id={props.id} count={0} />

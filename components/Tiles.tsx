@@ -1,4 +1,5 @@
 import classnames from "classnames";
+const DEBUG = false;
 
 const Tile = (props: {
   id: string;
@@ -61,12 +62,15 @@ export const SafeTile = (props: { id: string; count: number }) => (
 export const UnCheckedTile = (props: {
   id: string;
   flagged?: boolean;
+  type: "mine" | "safe";
   onClick(): void;
 }) => (
   <Tile
     className="bg-gray-300 shadow-touchable hover:shadow-pushed"
     id={props.id}
     onClick={props.onClick}
-    content={props.flagged ? "🚩" : ""}
+    content={
+      props.flagged ? "🚩" : !DEBUG ? "" : props.type === "mine" ? "💣" : ""
+    }
   />
 );
