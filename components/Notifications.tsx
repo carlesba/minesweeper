@@ -12,9 +12,7 @@ const Title = (props: { children: string }) => (
 );
 
 const Message = (props: { children: string }) => (
-  <h1 className="text-[3vh] text-gray-600 text-center">
-    {props.children}
-  </h1>
+  <h1 className="text-[3vh] text-gray-600 text-center">{props.children}</h1>
 );
 
 function ButtonNotification(props: { title: string; onClick: () => void }) {
@@ -49,6 +47,7 @@ function Menu(props: { onStartGame(): void; onClose(): void }) {
         <ButtonNotification title="New Game" onClick={props.onStartGame} />
         <ButtonNotification title="Close" onClick={props.onClose} />
       </div>
+      <Stats />
     </Notification>
   );
 }

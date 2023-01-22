@@ -39,7 +39,7 @@ function DisplayPercentage(props: { title: string; value: number }) {
       <div className="text-[3vh] text-gray-600 text-center text-shadow-texture">
         {Math.round(100 * props.value)}%
       </div>
-      <div className="text-[1vh] text-gray-600 text-center text-shadow-texture">
+      <div className="text-[2vh] font-bold text-gray-600 text-center">
         {props.title}
       </div>
     </div>
