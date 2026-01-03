@@ -18,8 +18,15 @@ const initialState: StatsState = {
   data: { time: 0, win: 0, mine: 0 },
 };
 
-const maybeLocalStorage = () =>
-  typeof localStorage === "object" ? maybe(localStorage) : Nothing;
+const maybeLocalStorage = () => {
+  try {
+    return typeof window !== "undefined" && window.localStorage
+      ? maybe(window.localStorage)
+      : Nothing;
+  } catch {
+    return Nothing;
+  }
+};
 
 const readStorage = (): Maybe<StatsState> =>
   maybeLocalStorage()
