@@ -40,14 +40,14 @@ function Notification(props: {
   );
 }
 
-function Menu(props: { onStartGame(): void; onClose(): void }) {
+function Menu(props: { onStartGame(): void; onClose(): void; showStats?: boolean }) {
   return (
     <Notification title="Menu">
       <div>
         <ButtonNotification title="New Game" onClick={props.onStartGame} />
         <ButtonNotification title="Close" onClick={props.onClose} />
       </div>
-      <Stats />
+      {props.showStats && <Stats />}
     </Notification>
   );
 }
@@ -160,21 +160,22 @@ export function Notifications(props: { children: React.ReactNode }) {
               notificationStore.hide();
             }}
             onClose={() => notificationStore.hide()}
+            showStats={state.visible}
           />
         ))
         .with({ gameStatus: "win" }, () => (
           <Notification title="You won!" message="All cleared!">
-            <Stats />
+            {state.visible && <Stats />}
           </Notification>
         ))
         .with({ gameStatus: "overtime" }, () => (
           <Notification title="Game Over" message="Time's up!">
-            <Stats />
+            {state.visible && <Stats />}
           </Notification>
         ))
         .with({ gameStatus: "boom" }, () => (
           <Notification title="Game Over" message="You hit a mine!">
-            <Stats />
+            {state.visible && <Stats />}
           </Notification>
         ))
         .otherwise(() => (
